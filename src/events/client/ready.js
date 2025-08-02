@@ -1,3 +1,4 @@
+const { ActivityType } = require('discord.js');
 const Logger = require('../../utils/logger');
 const config = require('../../../config/config');
 
@@ -6,13 +7,13 @@ module.exports = {
     once: true,
     async execute(client) {
         try {
-            // Set bot status
-            await client.user.setPresence({
+            // Initial status set
+            client.user.setPresence({
                 activities: [{
                     name: config.status.text,
-                    type: config.status.type
+                    type: ActivityType[config.status.type] || ActivityType.Playing, // Use enum and provide fallback
                 }],
-                status: 'dnd'
+                status: 'dnd' // Keep the dnd status as requested
             });
 
             // Log bot ready information
@@ -22,7 +23,6 @@ module.exports = {
             Logger.info(`Logged in as ${client.user.tag}`, 'Ready');
             Logger.info(`Bot ID: ${client.user.id}`, 'Ready');
             Logger.info(`Serving ${client.guilds.cache.size} guilds`, 'Ready');
-            Logger.info(`Serving ${client.users.cache.size} users`, 'Ready');
             
             // Log command statistics
             const commandStats = client.commandHandler.getStats();
@@ -39,10 +39,11 @@ module.exports = {
             // Set up periodic status updates
             setInterval(() => {
                 const guildCount = client.guilds.cache.size;
+                const statusText = `${config.status.text} | ${guildCount} servers`;
                 client.user.setPresence({
                     activities: [{
-                        name: `Under Construction | ${guildCount} servers`,
-                        type: 'PLAYING'
+                        name: statusText,
+                        type: ActivityType[config.status.type] || ActivityType.Playing,
                     }],
                     status: 'dnd'
                 });
@@ -55,4 +56,4 @@ module.exports = {
             Logger.debug(`Stack: ${error.stack}`, 'Ready');
         }
     }
-}; 
+};
