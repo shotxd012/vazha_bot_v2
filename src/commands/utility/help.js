@@ -11,8 +11,9 @@ module.exports = {
             option.setName('command')
                 .setDescription('The command to get help for')
                 .setRequired(false)
-                .setAutocomplete(true)),
+                .setAutocomplete(true)), // Autocomplete is enabled here
 
+    // This function handles the autocomplete suggestions
     async autocomplete(interaction) {
         const focusedValue = interaction.options.getFocused();
         const choices = interaction.client.commands.map(command => command.data.name);
@@ -21,7 +22,7 @@ module.exports = {
             filtered.map(choice => ({ name: choice, value: choice })),
         );
     },
-
+    
     async execute(interaction) {
         try {
             const commandName = interaction.options.getString('command');
