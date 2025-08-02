@@ -1,114 +1,71 @@
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const config = require('./config/config');
+const config =require('./config/config');
+const Logger = require('./src/utils/logger');
 
 /**
- * Deploy slash commands to Discord
+ * Deploys slash commands to Discord.
+ * This script reads all command files and syncs them with Discord,
+ * adding, updating, and removing commands as necessary.
  */
 async function deployCommands() {
     try {
-        console.log('Starting command deployment...');
+        Logger.info('Starting command deployment...', 'Deploy');
 
-        // Load commands from the commands directory
         const commands = [];
         const commandsPath = path.join(__dirname, 'src/commands');
-        
+
         if (!fs.existsSync(commandsPath)) {
-            console.error('Commands directory not found!');
+            Logger.error('Commands directory not found!', 'Deploy');
             return;
         }
 
-        // Recursively load commands
-        function loadCommandsFromDirectory(dirPath, category = '') {
-            const items = fs.readdirSync(dirPath);
+        // --- Load Command Files Recursively ---
+        const commandFolders = fs.readdirSync(commandsPath);
 
-            for (const item of items) {
-                const itemPath = path.join(dirPath, item);
-                const stat = fs.statSync(itemPath);
+        for (const folder of commandFolders) {
+            const commandsPathFolder = path.join(commandsPath, folder);
+            const commandFiles = fs.readdirSync(commandsPathFolder).filter(file => file.endsWith('.js'));
 
-                if (stat.isDirectory()) {
-                    // This is a category directory
-                    const newCategory = category ? `${category}/${item}` : item;
-                    loadCommandsFromDirectory(itemPath, newCategory);
-                } else if (item.endsWith('.js')) {
-                    // This is a command file
-                    try {
-                        const command = require(itemPath);
-                        
-                        if (command.data && command.data.name) {
-                            commands.push(command.data.toJSON());
-                            console.log(`Loaded command: ${command.data.name} (${category})`);
-                        }
-                    } catch (error) {
-                        console.error(`Error loading command ${itemPath}: ${error.message}`);
+            for (const file of commandFiles) {
+                const filePath = path.join(commandsPathFolder, file);
+                try {
+                    const command = require(filePath);
+                    if ('data' in command && 'execute' in command) {
+                        commands.push(command.data.toJSON());
+                        Logger.debug(`Loaded command: /${command.data.name}`, 'Deploy');
+                    } else {
+                        Logger.warn(`The command at ${filePath} is missing a required "data" or "execute" property.`, 'Deploy');
                     }
+                } catch (error) {
+                    Logger.error(`Error loading command file ${file}: ${error.message}`, 'Deploy');
                 }
             }
         }
-
-        loadCommandsFromDirectory(commandsPath);
 
         if (commands.length === 0) {
-            console.error('No commands found to deploy!');
+            Logger.warn('No valid command files found to deploy.', 'Deploy');
             return;
         }
 
-        // Create REST instance
+        // --- Register Commands with Discord ---
         const rest = new REST({ version: '10' }).setToken(config.token);
 
-        // First, get existing commands to delete them
-        let existingCommands = [];
-        try {
-            existingCommands = await rest.get(Routes.applicationCommands(config.clientId));
-            console.log(`Found ${existingCommands.length} existing commands to remove`);
-        } catch (error) {
-            console.warn(`Could not fetch existing commands: ${error.message}`);
-        }
+        Logger.info(`Started refreshing ${commands.length} application (/) commands globally.`, 'Deploy');
 
-        // Delete all existing commands (except Entry Point commands)
-        for (const existingCommand of existingCommands) {
-            if (existingCommand.type !== 1) { // Skip Entry Point commands
-                try {
-                    await rest.delete(
-                        Routes.applicationCommand(config.clientId, existingCommand.id)
-                    );
-                    console.log(`Deleted existing command: ${existingCommand.name}`);
-                } catch (error) {
-                    console.warn(`Failed to delete command ${existingCommand.name}: ${error.message}`);
-                }
-            } else {
-                console.log(`Skipping Entry Point command: ${existingCommand.name}`);
-            }
-        }
-
-        // Filter out any Entry Point commands from our new commands
-        const commandsToRegister = commands.filter(cmd => {
-            if (cmd.type === 1) {
-                console.warn(`Skipping Entry Point command: ${cmd.name}`);
-                return false;
-            }
-            return true;
-        });
-
-        if (commandsToRegister.length === 0) {
-            console.warn('No commands to register after filtering');
-            return;
-        }
-
-        console.log(`Started registering ${commandsToRegister.length} new application (/) commands.`);
-
-        // Register our new commands globally
+        // The 'put' method is used to fully refresh all commands with the current set.
+        // It's the recommended way to keep commands in sync.
         const data = await rest.put(
             Routes.applicationCommands(config.clientId),
-            { body: commandsToRegister }
+            { body: commands },
         );
 
-        console.log(`Successfully reloaded ${data.length} application (/) commands.`);
-        console.log('Command deployment completed!');
+        Logger.success(`Successfully reloaded ${data.length} application (/) commands.`, 'Deploy');
 
     } catch (error) {
-        console.error('Error deploying commands:', error);
+        Logger.error('Failed to deploy commands:', 'Deploy');
+        Logger.error(error.message); // Log the actual error message
         process.exit(1);
     }
 }
@@ -118,4 +75,4 @@ if (require.main === module) {
     deployCommands();
 }
 
-module.exports = { deployCommands }; 
+module.exports = { deployCommands };
