@@ -72,7 +72,7 @@ class InteractionHandler {
             Logger.info(`Executing command: ${commandName} by ${interaction.user.tag}`, 'InteractionHandler');
             
             // Update user stats in database
-            await this.updateUserStats(interaction.user);
+            await this.updateUserStats(interaction);
             
             // Execute the command
             await command.execute(interaction);
@@ -276,38 +276,46 @@ class InteractionHandler {
     }
 
     /**
-     * Update user statistics in database
-     * @param {User} user - The Discord user
+     * Update user statistics in database using an upsert operation
+     * @param {CommandInteraction} interaction - The interaction object
      */
-    async updateUserStats(user) {
+    async updateUserStats(interaction) {
         try {
             const User = require('../database/models/user');
-            
-            // Find or create user
-            let userDoc = await User.findOne({ userId: user.id });
-            
-            if (!userDoc) {
-                userDoc = new User({
-                    userId: user.id,
-                    discordId: user.id,
+            const user = interaction.user;
+            const commandName = interaction.commandName;
+
+            const query = { discordId: user.id };
+            const update = {
+                $set: {
                     username: user.username,
                     discriminator: user.discriminator,
-                    avatar: user.avatar
-                });
-            } else {
-                // Update user info
-                userDoc.username = user.username;
-                userDoc.discriminator = user.discriminator;
-                userDoc.avatar = user.avatar;
-                userDoc.discordId = user.id;
-            }
+                    avatar: user.avatar,
+                    lastSeen: new Date(),
+                },
+                $inc: {
+                    'commandStats.totalCommands': 1,
+                    [`commandStats.commandsUsed.${commandName}`]: 1
+                },
+                $setOnInsert: {
+                    userId: user.id, // Only set on creation
+                    joinDate: new Date()
+                }
+            };
+            const options = {
+                upsert: true, // Create if doesn't exist
+                new: true, // Return the updated document
+                setDefaultsOnInsert: true // Apply schema defaults on creation
+            };
 
-            // Update last seen and increment command usage with detailed tracking
-            userDoc.lastSeen = new Date();
-            await userDoc.incrementCommandUsage();
-            
+            await User.findOneAndUpdate(query, update, options);
+
         } catch (error) {
+            // Log the error but don't let it crash the command execution
             Logger.error(`Error updating user stats: ${error.message}`, 'InteractionHandler');
+            if (error.code === 11000) {
+                Logger.warn(`A duplicate key error occurred during upsert for user ${user.id}. This should not happen.`, 'InteractionHandler');
+            }
         }
     }
 
@@ -384,4 +392,4 @@ class InteractionHandler {
     }
 }
 
-module.exports = InteractionHandler; 
+module.exports = InteractionHandler;
