@@ -237,4 +237,4 @@ class CommandHandler {
     }
 }
 
-module.exports = CommandHandler; 
+module.exports = CommandHandler;

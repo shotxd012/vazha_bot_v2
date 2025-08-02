@@ -16,6 +16,12 @@ class InteractionHandler {
      * @param {Interaction} interaction - The interaction object
      */
     async handleInteraction(interaction) {
+        if (interaction.isButton() || interaction.isModalSubmit() || interaction.isAnySelectMenu()) {
+            if (this.client.listeners(interaction.customId).length > 0) {
+                return this.client.emit(interaction.customId, interaction);
+            }
+        }
+        
         try {
             // Handle different interaction types
             switch (interaction.type) {
@@ -143,7 +149,7 @@ class InteractionHandler {
                 break;
             default:
                 Logger.debug(`Unhandled button: ${buttonId}`, 'InteractionHandler');
-                await interaction.reply({ content: 'This button is not implemented yet.', ephemeral: true });
+                // Do not reply to unhandled buttons
         }
     }
 
@@ -164,7 +170,9 @@ class InteractionHandler {
                 break;
             default:
                 Logger.debug(`Unhandled select: ${selectId}`, 'InteractionHandler');
-                await interaction.reply({ content: 'This select menu is not implemented yet.', ephemeral: true });
+                 if (!interaction.replied) {
+                    await interaction.reply({ content: 'This select menu is not implemented yet.', ephemeral: true });
+                }
         }
     }
 
@@ -179,7 +187,9 @@ class InteractionHandler {
         Logger.debug(`Text input interaction: ${inputId} with value: ${value}`, 'InteractionHandler');
         
         // Handle text input (can be expanded)
-        await interaction.reply({ content: 'Text input received but not implemented yet.', ephemeral: true });
+        if (!interaction.replied) {
+            await interaction.reply({ content: 'Text input received but not implemented yet.', ephemeral: true });
+        }
     }
 
     /**
@@ -206,7 +216,9 @@ class InteractionHandler {
         Logger.debug(`Modal submit: ${modalId}`, 'InteractionHandler');
         
         // Handle modal submit (can be expanded)
-        await interaction.reply({ content: 'Modal submitted but not implemented yet.', ephemeral: true });
+         if (!interaction.replied) {
+            await interaction.reply({ content: 'Modal submitted but not implemented yet.', ephemeral: true });
+        }
     }
 
     /**

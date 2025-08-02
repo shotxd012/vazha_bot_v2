@@ -35,6 +35,7 @@ class VazhaBot {
         // Initialize collections
         this.client.commands = new Collection();
         this.client.events = new Collection();
+        this.client.welcomeSettings = new Collection();
     }
 
     /**

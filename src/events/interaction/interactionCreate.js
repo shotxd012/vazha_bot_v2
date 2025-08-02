@@ -3,6 +3,12 @@ const Logger = require('../../utils/logger');
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
+        if (interaction.isButton() || interaction.isModalSubmit() || interaction.isAnySelectMenu()) {
+            if (interaction.client.listeners(interaction.customId).length > 0) {
+                return;
+            }
+        }
+
         try {
             // Route interaction to the interaction handler
             await interaction.client.interactionHandler.handleInteraction(interaction);
