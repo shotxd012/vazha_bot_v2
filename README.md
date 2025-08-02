@@ -1,4 +1,4 @@
-# Vazha Bot 🤖
+# Vazha Bot 🤖 new
 
 A fully modular, production-ready Discord bot built with Discord.js v14 and CommonJS. Designed to run in any Discord server like a global public bot.
 
