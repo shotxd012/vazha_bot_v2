@@ -11,6 +11,7 @@ const InteractionHandler = require('./handlers/interactionHandler');
 
 // Import configuration
 const config = require('../config/config');
+const WelcomeSettings = require('./database/models/welcome'); // Import the model
 
 /**
  * Main Discord Bot Class
@@ -39,6 +40,21 @@ class VazhaBot {
     }
 
     /**
+     * Load welcome settings from the database
+     */
+    async loadWelcomeSettings() {
+        try {
+            const settings = await WelcomeSettings.find();
+            settings.forEach(setting => {
+                this.client.welcomeSettings.set(setting.guildId, setting);
+            });
+            Logger.info(`Loaded welcome settings for ${this.client.welcomeSettings.size} guilds.`, 'Main');
+        } catch (error) {
+            Logger.error(`Failed to load welcome settings: ${error.message}`, 'Main');
+        }
+    }
+
+    /**
      * Initialize the bot
      */
     async initialize() {
@@ -50,6 +66,9 @@ class VazhaBot {
 
             // Connect to database
             await DatabaseConnection.connect();
+
+            // Load welcome settings
+            await this.loadWelcomeSettings();
 
             // Load commands and events
             await this.client.commandHandler.loadCommands();
