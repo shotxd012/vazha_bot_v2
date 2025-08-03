@@ -1,6 +1,7 @@
 const { Events, AttachmentBuilder } = require('discord.js');
 const Guild = require('../../database/models/guild');
 const Greetify = require('greetify').Greetify;
+const Logger = require('../../utils/logger');
 
 module.exports = {
 	name: Events.GuildMemberAdd,
@@ -29,34 +30,50 @@ module.exports = {
             .replace('{user}', member.user.tag)
             .replace('{server}', member.guild.name);
 
-        const greetify = new Greetify()
-            .setAvatar(member.user.displayAvatarURL({ format: 'png', size: 256 }))
-            .setType('WELCOME')
-            .setBackground(guild.welcome.background)
-            .setUsername(member.user.username)
-            .setDiscriminator(member.user.discriminator)
-            .setMemberCount(member.guild.memberCount)
-            .setColor(guild.welcome.color)
-            .setMessage(message);
-            
-        const image = await greetify.build();
-        const attachment = new AttachmentBuilder(image, { name: 'welcome.png' });
+        try {
+            const greetify = new Greetify()
+                .setAvatar(member.user.displayAvatarURL({ format: 'png', size: 256 }))
+                .setType('WELCOME')
+                .setBackground(guild.welcome.background)
+                .setUsername(member.user.username)
+                .setDiscriminator(member.user.discriminator)
+                .setMemberCount(member.guild.memberCount)
+                .setColor(guild.welcome.color)
+                .setMessage(message);
+                
+            const image = await greetify.build();
+            const attachment = new AttachmentBuilder(image, { name: 'welcome.png' });
 
-        if (guild.welcome.embed) {
-            const embed = {
-                title: 'Welcome!',
-                description: guild.welcome.mention ? `${member}` : '',
-                color: parseInt(guild.welcome.color.replace('#', ''), 16),
-                image: {
-                    url: 'attachment://welcome.png',
-                },
-            };
-            welcomeChannel.send({ embeds: [embed], files: [attachment] });
-        } else {
-            if (_guild.welcome.mention) {
-                welcomeChannel.send({ content: `${member}`, files: [attachment] });
+            if (guild.welcome.embed) {
+                const embed = {
+                    title: 'Welcome!',
+                    description: guild.welcome.mention ? `${member}` : '',
+                    color: parseInt(guild.welcome.color.replace('#', ''), 16),
+                    image: {
+                        url: 'attachment://welcome.png',
+                    },
+                };
+                welcomeChannel.send({ embeds: [embed], files: [attachment] });
             } else {
-                welcomeChannel.send({ files: [attachment] });
+                if (guild.welcome.mention) {
+                    welcomeChannel.send({ content: `${member}`, files: [attachment] });
+                } else {
+                    welcomeChannel.send({ files: [attachment] });
+                }
+            }
+        } catch (error) {
+            Logger.error(`Error generating welcome card for ${member.user.tag} in ${member.guild.name}: ${error.message}`, 'WelcomeCard');
+            Logger.debug(`Stack: ${error.stack}`, 'WelcomeCard');
+            
+            // Send a simple text welcome message as fallback
+            const fallbackMessage = guild.welcome.message
+                .replace('{user}', member.user.tag)
+                .replace('{server}', member.guild.name);
+                
+            if (guild.welcome.mention) {
+                welcomeChannel.send({ content: `${member} ${fallbackMessage}` });
+            } else {
+                welcomeChannel.send({ content: fallbackMessage });
             }
         }
 	},
