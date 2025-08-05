@@ -6,53 +6,74 @@ const welcomeSchema = new Schema({
         required: true,
         unique: true,
     },
-    welcomeChannel: {
-        type: String,
-        default: null,
-    },
-    welcomeEnabled: {
+    enabled: {
         type: Boolean,
         default: false,
     },
-    useEmbed: {
-        type: Boolean,
-        default: true,
-    },
-    mentionUser: {
-        type: Boolean,
-        default: true,
-    },
-    joinRoleEnabled: {
-        type: Boolean,
-        default: false,
-    },
-    joinRoleId: {
+    channelId: {
         type: String,
         default: null,
     },
-    embedSettings: {
-        thumbnailType: {
+    welcomeType: {
+        type: String,
+        enum: ['embed', 'text'],
+        default: 'embed',
+    },
+    message: {
+        type: String,
+        default: 'Welcome {user} to {server}!',
+    },
+    imageUrl: {
+        type: String,
+        default: null,
+    },
+    roleEnabled: {
+        type: Boolean,
+        default: false,
+    },
+    roleId: {
+        type: String,
+        default: null,
+    },
+    embed: {
+        title: {
             type: String,
-            enum: ['user', 'custom', null],
-            default: 'user',
+            default: 'Welcome!',
         },
-        customThumbnailUrl: String,
-        embedImageUrl: String,
-        embedFields: [
+        description: {
+            type: String,
+            default: 'Welcome {user} to {server}! We are happy to have you here.',
+        },
+        color: {
+            type: String,
+            default: '#00ff00',
+        },
+        thumbnail: {
+            type: Boolean,
+            default: true,
+        },
+        image: {
+            type: String,
+            default: null,
+        },
+        footer: {
+            text: {
+                type: String,
+                default: 'Vazha Bot',
+            },
+            iconURL: {
+                type: String,
+                default: null,
+            },
+        },
+        fields: [
             {
                 name: String,
                 value: String,
                 inline: Boolean,
             },
         ],
-        footerText: String,
-    },
-    textImageLink: String,
-    advanced: {
-        delaySeconds: Number,
-        channelFallback: Boolean,
-        welcomeDm: Boolean,
     },
 });
 
-module.exports = model('WelcomeSettings', welcomeSchema);
+module.exports = model('Welcome', welcomeSchema);
