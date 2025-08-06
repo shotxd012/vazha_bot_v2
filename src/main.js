@@ -35,6 +35,19 @@ class VazhaBot {
         // Initialize collections
         this.client.commands = new Collection();
         this.client.events = new Collection();
+
+        this.client.getLogs = async (guildId) => {
+            const Guild = require('./database/models/guild');
+            const guildDb = await Guild.findOne({ guildId });
+            if (!guildDb || !guildDb.logChannelId) return null;
+            try {
+                const channel = await this.client.channels.fetch(guildDb.logChannelId);
+                return channel;
+            } catch (error) {
+                Logger.warn(`Could not fetch log channel ${guildDb.logChannelId} for guild ${guildId}`, 'getLogs');
+                return null;
+            }
+        };
     }
 
     /**

@@ -1,15 +1,15 @@
 const { model, Schema } = require('mongoose');
 
-const guildSchema = new Schema({
-    guildId: {
+const boostChannelSchema = new Schema({
+    Guild: {
         type: String,
         required: true,
         unique: true,
     },
-    logChannelId: {
+    Channel: {
         type: String,
-        default: null,
+        required: true,
     },
 });
 
-module.exports = model('Guild', guildSchema);
+module.exports = model('BoostChannel', boostChannelSchema);
