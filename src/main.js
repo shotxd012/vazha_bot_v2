@@ -8,6 +8,7 @@ const DatabaseConnection = require('./database/connect');
 const CommandHandler = require('./handlers/commandHandler');
 const EventHandler = require('./handlers/eventHandler');
 const InteractionHandler = require('./handlers/interactionHandler');
+const InviteHandler = require('./handlers/inviteHandler');
 
 // Import configuration
 const config = require('../config/config');
@@ -31,6 +32,7 @@ class VazhaBot {
         this.client.commandHandler = new CommandHandler(this.client);
         this.client.eventHandler = new EventHandler(this.client);
         this.client.interactionHandler = new InteractionHandler(this.client);
+        this.client.inviteHandler = new InviteHandler(this.client);
 
         // Initialize collections
         this.client.commands = new Collection();
