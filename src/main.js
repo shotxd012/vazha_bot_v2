@@ -50,6 +50,27 @@ class VazhaBot {
                 return null;
             }
         };
+
+        const Levels = require('./database/models/levels');
+
+        this.client.addXP = async (userId, guildId, xp) => {
+            const user = await Levels.findOneAndUpdate(
+                { userId, guildId },
+                { $inc: { xp } },
+                { upsert: true, new: true }
+            );
+
+            const xpToNextLevel = 5 * (user.level ** 2) + 50 * user.level + 100;
+            if (user.xp >= xpToNextLevel) {
+                await Levels.updateOne({ userId, guildId }, { $inc: { level: 1 } });
+                return true; // Leveled up
+            }
+            return false; // Did not level up
+        };
+
+        this.client.fetchLevels = async (userId, guildId) => {
+            return await Levels.findOne({ userId, guildId });
+        };
     }
 
     /**

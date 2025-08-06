@@ -40,5 +40,16 @@ module.exports = {
         moderation: '🛡️ Moderation',
         fun: '🎮 Fun',
         admin: '⚙️ Admin'
-    }
+    },
+
+    // Webhooks
+    webhooks: {
+        dmLogs: {
+            id: process.env.DM_LOGS_ID,
+            token: process.env.DM_LOGS_TOKEN,
+        }
+    },
+
+    // OpenAI API Key
+    openaiKey: process.env.OPENAI_API_KEY,
 }; 
