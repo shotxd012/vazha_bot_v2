@@ -1,8 +1,33 @@
 const Logger = require('../../utils/logger');
+const Welcome = require('../../database/models/welcome');
 
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction) {
+        if (interaction.isModalSubmit() && interaction.customId === 'welcomeEmbedModal') {
+            const guildId = interaction.guild.id;
+            const title = interaction.fields.getTextInputValue('title');
+            const description = interaction.fields.getTextInputValue('description');
+            const color = interaction.fields.getTextInputValue('color');
+            const image = interaction.fields.getTextInputValue('image');
+            const footer = interaction.fields.getTextInputValue('footer');
+
+            await Welcome.findOneAndUpdate(
+                { guildId },
+                {
+                    'embed.title': title,
+                    'embed.description': description,
+                    'embed.color': color,
+                    'embed.image': image,
+                    'embed.footer.text': footer,
+                },
+                { upsert: true }
+            );
+
+            await interaction.reply({ content: 'Welcome embed updated successfully!', ephemeral: true });
+            return;
+        }
+
         if (interaction.isButton() || interaction.isModalSubmit() || interaction.isAnySelectMenu()) {
             if (interaction.client.listeners(interaction.customId).length > 0) {
                 return;

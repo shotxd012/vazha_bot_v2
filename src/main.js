@@ -8,6 +8,7 @@ const DatabaseConnection = require('./database/connect');
 const CommandHandler = require('./handlers/commandHandler');
 const EventHandler = require('./handlers/eventHandler');
 const InteractionHandler = require('./handlers/interactionHandler');
+const InviteHandler = require('./handlers/inviteHandler');
 
 // Import configuration
 const config = require('../config/config');
@@ -31,11 +32,45 @@ class VazhaBot {
         this.client.commandHandler = new CommandHandler(this.client);
         this.client.eventHandler = new EventHandler(this.client);
         this.client.interactionHandler = new InteractionHandler(this.client);
+        this.client.inviteHandler = new InviteHandler(this.client);
 
         // Initialize collections
         this.client.commands = new Collection();
         this.client.events = new Collection();
-        this.client.welcomeSettings = new Collection();
+
+        this.client.getLogs = async (guildId) => {
+            const Guild = require('./database/models/guild');
+            const guildDb = await Guild.findOne({ guildId });
+            if (!guildDb || !guildDb.logChannelId) return null;
+            try {
+                const channel = await this.client.channels.fetch(guildDb.logChannelId);
+                return channel;
+            } catch (error) {
+                Logger.warn(`Could not fetch log channel ${guildDb.logChannelId} for guild ${guildId}`, 'getLogs');
+                return null;
+            }
+        };
+
+        const Levels = require('./database/models/levels');
+
+        this.client.addXP = async (userId, guildId, xp) => {
+            const user = await Levels.findOneAndUpdate(
+                { userId, guildId },
+                { $inc: { xp } },
+                { upsert: true, new: true }
+            );
+
+            const xpToNextLevel = 5 * (user.level ** 2) + 50 * user.level + 100;
+            if (user.xp >= xpToNextLevel) {
+                await Levels.updateOne({ userId, guildId }, { $inc: { level: 1 } });
+                return true; // Leveled up
+            }
+            return false; // Did not level up
+        };
+
+        this.client.fetchLevels = async (userId, guildId) => {
+            return await Levels.findOne({ userId, guildId });
+        };
     }
 
     /**
