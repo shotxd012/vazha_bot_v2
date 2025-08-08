@@ -66,9 +66,10 @@ class ErrorHandler {
                 }
             };
 
-            if (interaction.deferred || interaction.replied) {
+            // Check if interaction can be replied to
+            if (interaction.replied || interaction.deferred) {
                 await interaction.editReply({ embeds: [errorEmbed] });
-            } else {
+            } else if (!interaction.acknowledged) {
                 await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
             }
         } catch (replyError) {

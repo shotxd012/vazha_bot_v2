@@ -109,7 +109,7 @@ module.exports = {
 
         const editReply = async (payload) => {
             try {
-                await interaction.editReply(payload);
+                await reply.edit(payload);
             } catch (error) {
                 if (error.code !== 10008) { // Ignore "Unknown Message"
                     console.error("Failed to edit reply:", error);
@@ -192,34 +192,36 @@ module.exports = {
                     modal.addComponents(new ActionRowBuilder().addComponents(textInput));
     
                     await i.showModal(modal);
-    
-                    try {
-                        const modalInteraction = await i.awaitModalSubmit({
-                            filter: mi => mi.user.id === i.user.id && mi.customId === `welcome-${modalType}-modal`,
-                            time: 120000 
-                        });
-    
-                        await modalInteraction.deferUpdate();
-                        const value = modalInteraction.fields.getTextInputValue(`welcome-${modalType}-input`);
-                        
-                        if (modalType === 'color' && !/^#[0-9A-F]{6}$/i.test(value)) {
-                            const followUp = await i.followUp({ content: '❌ Invalid hex color code. Please use a valid format (e.g., #FF5733).', ephemeral: true });
-                            setTimeout(() => followUp.delete().catch(() => {}), 3000);
-                            return;
-                        }
-                        
-                        guildData.welcome[modalType] = value;
-                        await guildData.save();
-                        
-                        await editReply({ embeds: [createWelcomeEmbed(guildData)], components: createActionRows(guildData) });
-    
-                    } catch (err) {
-                       // User took too long
-                    }
                 }
             } catch (error) {
                 console.error("Error in collector:", error);
             }
+        });
+
+        // Set up modal event listeners
+        const modalHandlers = ['message', 'background', 'color'];
+        modalHandlers.forEach(modalType => {
+            interaction.client.once(`welcome-${modalType}-modal`, async (modalInteraction, value) => {
+                try {
+                    if (modalType === 'color' && !/^#[0-9A-F]{6}$/i.test(value)) {
+                        await modalInteraction.reply({ content: '❌ Invalid hex color code. Please use a valid format (e.g., #FF5733).', ephemeral: true });
+                        setTimeout(() => modalInteraction.deleteReply().catch(() => {}), 3000);
+                        return;
+                    }
+                    
+                    guildData.welcome[modalType] = value;
+                    await guildData.save();
+                    
+                    await modalInteraction.reply({ content: `✅ Welcome ${modalType} updated successfully!`, ephemeral: true });
+                    setTimeout(() => modalInteraction.deleteReply().catch(() => {}), 3000);
+                    
+                    await editReply({ embeds: [createWelcomeEmbed(guildData)], components: createActionRows(guildData) });
+                    
+                } catch (error) {
+                    console.error(`Error handling ${modalType} modal:`, error);
+                    await modalInteraction.reply({ content: '❌ Error updating welcome settings.', ephemeral: true });
+                }
+            });
         });
 
         collector.on('end', () => {

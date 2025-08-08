@@ -215,8 +215,26 @@ class InteractionHandler {
         
         Logger.debug(`Modal submit: ${modalId}`, 'InteractionHandler');
         
-        // Handle modal submit (can be expanded)
-         if (!interaction.replied) {
+        // Handle welcome modal submissions
+        if (modalId.startsWith('welcome-') && modalId.endsWith('-modal')) {
+            try {
+                const modalType = modalId.split('-')[1];
+                const value = interaction.fields.getTextInputValue(`welcome-${modalType}-input`);
+                
+                // Emit the modal event for the welcome setup to handle
+                this.client.emit(`welcome-${modalType}-modal`, interaction, value);
+                return;
+            } catch (error) {
+                Logger.error(`Error handling welcome modal: ${error.message}`, 'InteractionHandler');
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ content: 'Error processing modal submission.', ephemeral: true });
+                }
+                return;
+            }
+        }
+        
+        // Handle other modal submits (can be expanded)
+        if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({ content: 'Modal submitted but not implemented yet.', ephemeral: true });
         }
     }
@@ -340,9 +358,10 @@ class InteractionHandler {
         try {
             const embed = EmbedBuilderUtil.error('Error', message);
             
+            // Check if interaction can be replied to
             if (interaction.deferred || interaction.replied) {
                 await interaction.editReply({ embeds: [embed] });
-            } else {
+            } else if (!interaction.acknowledged) {
                 await interaction.reply({ embeds: [embed], ephemeral: true });
             }
         } catch (error) {
@@ -362,9 +381,10 @@ class InteractionHandler {
                 'An error occurred while processing your request.'
             );
             
-            if (interaction.deferred || interaction.replied) {
+            // Check if interaction can be replied to
+            if (interaction.replied || interaction.deferred) {
                 await interaction.editReply({ embeds: [embed] });
-            } else {
+            } else if (!interaction.acknowledged) {
                 await interaction.reply({ embeds: [embed], ephemeral: true });
             }
         } catch (replyError) {

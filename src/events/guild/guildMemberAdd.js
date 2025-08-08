@@ -1,6 +1,6 @@
 const { Events, AttachmentBuilder } = require('discord.js');
 const Guild = require('../../database/models/guild');
-const Greetify = require('greetify').Greetify;
+const { Canvas } = require('canvacord');
 const Logger = require('../../utils/logger');
 
 module.exports = {
@@ -31,24 +31,24 @@ module.exports = {
             .replace('{server}', member.guild.name);
 
         try {
-            const greetify = new Greetify()
-                .setAvatar(member.user.displayAvatarURL({ format: 'png', size: 256 }))
-                .setType('WELCOME')
-                .setBackground(guild.welcome.background)
-                .setUsername(member.user.username)
-                .setDiscriminator(member.user.discriminator)
-                .setMemberCount(member.guild.memberCount)
-                .setColor(guild.welcome.color)
-                .setMessage(message);
-                
-            const image = await greetify.build();
-            const attachment = new AttachmentBuilder(image, { name: 'welcome.png' });
+            const welcomeCard = await Canvas.welcome({
+                username: member.user.username,
+                discriminator: member.user.discriminator,
+                avatarURL: member.user.displayAvatarURL({ format: 'png', size: 256 }),
+                memberCount: member.guild.memberCount,
+                guildName: member.guild.name,
+                background: guild.welcome.background || 'https://i.imgur.com/8TkXfXj.png',
+                color: guild.welcome.color || '#ffffff',
+                text: message
+            });
+
+            const attachment = new AttachmentBuilder(welcomeCard, { name: 'welcome.png' });
 
             if (guild.welcome.embed) {
                 const embed = {
                     title: 'Welcome!',
                     description: guild.welcome.mention ? `${member}` : '',
-                    color: parseInt(guild.welcome.color.replace('#', ''), 16),
+                    color: parseInt(guild.welcome.color?.replace('#', '') || 'ffffff', 16),
                     image: {
                         url: 'attachment://welcome.png',
                     },
